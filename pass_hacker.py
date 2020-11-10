@@ -48,12 +48,12 @@ if __name__ == '__main__':
         print("-" * 60)
         print("[*] UTILISANT LE FICHIER ZIP " + args.zipfile)
         print("-" * 60)
-        crack_zip(args.zipfile, args.plength, args.file)
+        Cracker.crack_zip(args.zipfile, args.plength, args.file)
     elif args.zipfile and not args.plength and args.file:
         print("-" * 60)
         print("[*] UTILISANT LE FICHIER ZIP " + args.zipfile)
         print("-" * 60)
-        crack_zip(args.zipfile, args.plength, args.file)
+        Cracker.crack_zip(args.zipfile, args.plength, args.file)
     elif args.md5:
         print("-" * 60)
         print("[*] CRACKING DU HASH " + args.md5)
@@ -61,16 +61,16 @@ if __name__ == '__main__':
         if args.file:
             print("[*] UTILISANT LE FICHIER DE MOTS-CLÉS " + args.file)
             print("-" * 60)
-            crack_dict(args.md5, args.file)
+            Cracker.crack_dict(args.md5, args.file)
         elif args.plength:
             print("[*] UTILISANT LE MODE INCREMENTAL POUR " +
                   str(args.plength) + " LETTRE(S)")
             print("-" * 60)
-            crack_incr(args.md5, args.plength)
+            Cracker.crack_incr(args.md5, args.plength)
         elif args.online:
             print("[*] UTILISANT LE MODE EN LIGNE")
             print("-" * 60)
-            crack_en_ligne(args.md5)
+            Cracker.crack_en_ligne(args.md5)
         else:
             print(Color.ROUGE +
                   "[-] VEUILLEZ CHOISIR L'ARGUMENT -f ou -l avec -md5." + Color.FIN)
