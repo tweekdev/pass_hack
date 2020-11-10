@@ -83,8 +83,10 @@ class Cracker:
                 sys.exit(2)
 
     @staticmethod
-    def crack_dict(md5, file):
+    def crack_dict(md5, file, order, done_queue):
         """
+        :param done_queue:
+        :param order:
         :param md5: Hash MD5
         :param file: Dictionary file
         :return:
@@ -92,14 +94,20 @@ class Cracker:
         # Casse un HASH MD5 (md5) via une liste de mots-clés (file)
         try:
             trouve = False
-            ofile = open(file, "r")
-            for mot in ofile.readlines():
+            ofile = open(file, "r", encoding='latin-1')
+            if Order.ASCEND == order:
+                contenu = reversed(list(ofile.readlines()))
+            else:
+                contenu = ofile.readlines()
+            for mot in contenu:
                 mot = mot.strip("\n")
                 hashmd5 = hashlib.md5(mot.encode("utf8")).hexdigest()
                 if hashmd5 == md5:
+                    trouve = True
                     print(Color.VERT + "[+] Mot de passe trouvé : " +
                           str(mot) + " (" + hashmd5 + ")" + Color.FIN)
-                    trouve = True
+                    done_queue.put("TROUVE")
+                    break
             if not trouve:
                 print(Color.ROUGE + "[-] Mot de passe non trouvé :(" + Color.FIN)
             ofile.close()
@@ -108,6 +116,7 @@ class Cracker:
                   "[-] Erreur : nom de dossier ou fichier introuvable !" + Color.FIN)
             sys.exit(1)
         except Exception as err:
+            print("prout")
             print("Couleur.ROUGE + [-] Erreur : " + str(err) + Color.FIN)
             sys.exit(2)
 
@@ -163,3 +172,64 @@ class Cracker:
             print(Color.VERT +
                   "[+] MOT DE PASSE TROUVE VIA GOOGLE : " + url + Color.FIN)
             print("-" * 60)
+
+    @staticmethod
+    def crack_smart(md5, pattern, _index=0):
+        """
+        :param md5:
+        :param pattern:
+        :param _index:
+        :return:
+        """
+        MAJ = string.ascii_uppercase
+        CHIFFRES = string.digits
+        MIN = string.ascii_lowercase
+
+        if _index < len(pattern):
+            if pattern[_index] in MAJ + CHIFFRES + MIN:
+                Cracker.crack_smart(md5, pattern, _index + 1)
+            if "^" == pattern[_index]:
+                for c in MAJ:
+                    p = pattern.replace("^", c, 1)
+                    currhash = hashlib.md5(p.encode("utf8")).hexdigest()
+                    if currhash == md5:
+                        print(Color.VERT + "[+] MOT DE PASSE TROUVE : " + p + Color.FIN)
+                        sys.exit(0)
+                    print("[*] TEST DE : " + p + " (" + currhash + ")")
+                    Cracker.crack_smart(md5, p, _index + 1)
+
+            if "*" == pattern[_index]:
+                for c in MIN:
+                    p = pattern.replace("*", c, 1)
+                    currhash = hashlib.md5(p.encode("utf8")).hexdigest()
+                    if currhash == md5:
+                        print(Color.VERT + "[+] MOT DE PASSE TROUVE : " + p + Color.FIN)
+                        sys.exit(0)
+                    print("[*] TEST DE : " + p + " (" + currhash + ")")
+                    Cracker.crack_smart(md5, p, _index + 1)
+
+            if "²" == pattern[_index]:
+                for c in CHIFFRES:
+                    p = pattern.replace("²", c, 1)
+                    currhash = hashlib.md5(p.encode("utf8")).hexdigest()
+                    if currhash == md5:
+                        print(Color.VERT + "[+] MOT DE PASSE TROUVE : " + p + Color.FIN)
+                        sys.exit(0)
+                    print("[*] TEST DE : " + p + " (" + currhash + ")")
+                    Cracker.crack_smart(md5, p, _index + 1)
+        else:
+            return
+
+    @staticmethod
+    def work(work_queue, done_queue, md5, file, order):
+        """
+
+        :param work_queue:
+        :param done_queue:
+        :param md5:
+        :param file:
+        :param order:
+        :return:
+        """
+        o = work_queue.get()
+        o.crack_dict(md5, file, order, done_queue)

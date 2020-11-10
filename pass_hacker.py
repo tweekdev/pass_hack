@@ -3,8 +3,8 @@
 import argparse
 import atexit
 import time
-
 from pyfiglet import Figlet
+import multiprocessing
 
 from cracker import *
 
@@ -33,9 +33,12 @@ if __name__ == '__main__':
                         help="Choose a zip file", required=False)
     parser.add_argument("-o", dest="online", help="Find the hash online (google)",
                         required=False, action="store_true")
-
+    parser.add_argument("-p", dest="pattern", help="Utilise le motif de mot de passe (^=MAJ, *=MIN, ²=CHIFFRES)")
     args = parser.parse_args()
 
+    work_queue = multiprocessing.Queue()
+    done_queue = multiprocessing.Queue()
+    cracker = Cracker()
     debut = time.time()
     atexit.register(affiche_duree)
 
@@ -44,24 +47,42 @@ if __name__ == '__main__':
         print("[*] HASH MD5 DE " + args.gen + " : " +
               hashlib.md5(args.gen.encode("utf8")).hexdigest())
         print("-" * 60)
-    elif args.zipfile and args.plength and not args.file:
-        print("-" * 60)
-        print("[*] UTILISANT LE FICHIER ZIP " + args.zipfile)
-        print("-" * 60)
-        Cracker.crack_zip(args.zipfile, args.plength, args.file)
-    elif args.zipfile and not args.plength and args.file:
-        print("-" * 60)
-        print("[*] UTILISANT LE FICHIER ZIP " + args.zipfile)
-        print("-" * 60)
-        Cracker.crack_zip(args.zipfile, args.plength, args.file)
-    elif args.md5:
+    if args.zipfile:
+        if args.zipfile and args.plength and not args.file:
+            print("-" * 60)
+            print("[*] UTILISANT LE FICHIER ZIP " + args.zipfile)
+            print("-" * 60)
+            Cracker.crack_zip(args.zipfile, args.plength, args.file)
+        if args.zipfile and not args.plength and args.file:
+            print("-" * 60)
+            print("[*] UTILISANT LE FICHIER ZIP " + args.zipfile)
+            print("-" * 60)
+            Cracker.crack_zip(args.zipfile, args.plength, args.file)
+    if args.md5:
         print("-" * 60)
         print("[*] CRACKING DU HASH " + args.md5)
         print("-" * 60)
         if args.file:
             print("[*] UTILISANT LE FICHIER DE MOTS-CLÉS " + args.file)
             print("-" * 60)
-            Cracker.crack_dict(args.md5, args.file)
+            p1 = multiprocessing.Process(target=Cracker.work, args=(work_queue, done_queue, args.md5, args.file,
+                                                                    Order.DESCEND))
+            work_queue.put(cracker)
+            p1.start()
+
+            p2 = multiprocessing.Process(target=Cracker.work, args=(work_queue, done_queue, args.md5, args.file,
+                                                                    Order.ASCEND))
+            work_queue.put(cracker)
+            p2.start()
+
+            while True:
+                data = done_queue.get()
+
+                if data == "TROUVE" or data == "NON TROUVE":
+                    p1.kill()
+                    p2.kill()
+                    break
+            # Cracker.crack_dict(args.md5, args.file)
         elif args.plength:
             print("[*] UTILISANT LE MODE INCREMENTAL POUR " +
                   str(args.plength) + " LETTRE(S)")
@@ -71,6 +92,9 @@ if __name__ == '__main__':
             print("[*] UTILISANT LE MODE EN LIGNE")
             print("-" * 60)
             Cracker.crack_en_ligne(args.md5)
+        elif args.pattern:
+            print("[*] UTILISANT LE MODELE DE MOT DE PASSE : " + args.pattern)
+            Cracker.crack_smart(args.md5, args.pattern)
         else:
             print(Color.ROUGE +
                   "[-] VEUILLEZ CHOISIR L'ARGUMENT -f ou -l avec -md5." + Color.FIN)

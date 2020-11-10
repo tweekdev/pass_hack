@@ -7,3 +7,8 @@ class Color:
     CYAN = '\033[36m'
     BLANC = '\033[37m'
     FIN = '\033[0m'
+
+
+class Order:
+    ASCEND = True
+    DESCEND = False
